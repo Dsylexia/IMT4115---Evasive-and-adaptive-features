@@ -1,0 +1,66 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-helloworld",
+            "type": "shell",
+            "command": "x86_64-w64-mingw32-g++",
+            "args": [
+                "${workspaceFolder}/src/HelloWorld.cpp",
+                "-I${workspaceFolder}/includes",
+                "-I/usr/x86_64-w64-mingw32/include",
+                "-std=c++17",
+                "-static",
+                "-static-libgcc",
+                "-static-libstdc++",
+                "-mconsole",                     
+                "-nostartfiles",                 
+                "-Wl,-e,EntryPoint",            
+                "-o",
+                "${workspaceFolder}/spike/Hello_World.exe"
+            ],
+            "problemMatcher": ["$gcc"],
+            "detail": "Cross-compiles HelloWorld.cpp for Windows with a custom entry point and static linking"
+        },
+        {
+            "label": "convert-to-hex-array",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "xxd -i \"${workspaceFolder}/spike/Hello_World.exe\" | sed 's/_.*_spike_Hello_World_exe/hello_world_exe/g' > \"${workspaceFolder}/bin/HelloWorldHex.h\""
+            ],
+            "dependsOn": "build-helloworld",
+            "problemMatcher": [],
+            "detail": "Converts Hello_World.exe to a hex array and stores it in HelloWorldHex.h with readable names"
+        },
+        {
+            "label": "build-obfuscate",
+            "type": "shell",
+            "command": "x86_64-w64-mingw32-g++",
+            "args": [
+                "${workspaceFolder}/src/Obfuscate.cpp",
+                "-I${workspaceFolder}/includes",
+                "-I/usr/x86_64-w64-mingw32/include",
+                "-std=c++17",
+                "-static",
+                "-static-libgcc",
+                "-static-libstdc++",
+                "-o",
+                "${workspaceFolder}/spike/obfuscate.exe"
+            ],
+            "dependsOn": "convert-to-hex-array",
+            "problemMatcher": ["$gcc"],
+            "detail": "Cross-compiles Obfuscate.cpp for Windows using MinGW with static linking and links with HelloWorldHex.h"
+        },
+        {
+            "label": "build-all",
+            "dependsOn": ["build-obfuscate"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Builds HelloWorld.exe, converts it to a hex array, and builds obfuscate.exe"
+        }
+    ]
+}
