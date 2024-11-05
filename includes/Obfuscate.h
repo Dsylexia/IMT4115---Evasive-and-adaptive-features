@@ -1,9 +1,10 @@
 #ifndef OBFUSCATE_H
 #define OBFUSCATE_H
 
-#include <iostream>
-#include <stdlib.h>
 #include <windows.h>
+#include <iostream>
+#include <winternl.h>
+#include <string>
 
 
 #endif  // OBFUSCATE_H

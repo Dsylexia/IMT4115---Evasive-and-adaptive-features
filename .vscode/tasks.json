@@ -2,35 +2,12 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build-helloworld",
-            "type": "shell",
-            "command": "x86_64-w64-mingw32-g++",
-            "args": [
-                "${workspaceFolder}/src/HelloWorld.cpp",
-                "-I${workspaceFolder}/includes",
-                "-I/usr/x86_64-w64-mingw32/include",
-                "-std=c++17",
-                "-static",
-                "-static-libgcc",
-                "-static-libstdc++",
-                "-mwindows",
-                "-Wl,--subsystem,windows",       // Set subsystem to Windows
-                "-Wl,--dynamicbase",             // Enable ASLR for relocation
-                "-o",
-                "${workspaceFolder}/spike/Hello_World.exe"
-            ],
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "detail": "Cross-compiles HelloWorld.cpp for Windows with static linking and Windows subsystem"
-        },
-        {
             "label": "convert-to-hex-array",
             "type": "shell",
             "command": "bash",
             "args": [
                 "-c",
-                "xxd -i \"${workspaceFolder}/spike/Hello_World.exe.exe\" | sed 's/_.*_spike_Hello_World_exe/hello_world_exe/g' > \"${workspaceFolder}/bin/HelloWorldHex.h\""
+                "xxd -i -n hello_world_exe \"${workspaceFolder}/bin/Hello_World.exe.exe\" > \"${workspaceFolder}/includes/HelloWorldHex.h\""
             ],
             "dependsOn": "build-helloworld",
             "problemMatcher": [],
@@ -49,8 +26,8 @@
                 "-static-libgcc",
                 "-static-libstdc++",
                 "-mwindows",
-                "-Wl,--dynamicbase",             // Enable relocation tables
-                "-Wl,--nxcompat",                // Enable DEP (data execution prevention)
+                "-Wl,--dynamicbase",
+                "-Wl,--nxcompat",
                 "-o",
                 "${workspaceFolder}/spike/Obfuscate.exe"
             ],

