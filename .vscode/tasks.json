@@ -13,14 +13,16 @@
                 "-static",
                 "-static-libgcc",
                 "-static-libstdc++",
-                "-mconsole",                     
-                "-nostartfiles",                 
-                "-Wl,-e,EntryPoint",            
+                "-mwindows",
+                "-Wl,--subsystem,windows",       // Set subsystem to Windows
+                "-Wl,--dynamicbase",             // Enable ASLR for relocation
                 "-o",
                 "${workspaceFolder}/spike/Hello_World.exe"
             ],
-            "problemMatcher": ["$gcc"],
-            "detail": "Cross-compiles HelloWorld.cpp for Windows with a custom entry point and static linking"
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Cross-compiles HelloWorld.cpp for Windows with static linking and Windows subsystem"
         },
         {
             "label": "convert-to-hex-array",
@@ -35,7 +37,7 @@
             "detail": "Converts Hello_World.exe to a hex array and stores it in HelloWorldHex.h with readable names"
         },
         {
-            "label": "build-obfuscate",
+            "label": "build-Obfuscate",
             "type": "shell",
             "command": "x86_64-w64-mingw32-g++",
             "args": [
@@ -46,21 +48,28 @@
                 "-static",
                 "-static-libgcc",
                 "-static-libstdc++",
+                "-mwindows",
+                "-Wl,--dynamicbase",             // Enable relocation tables
+                "-Wl,--nxcompat",                // Enable DEP (data execution prevention)
                 "-o",
-                "${workspaceFolder}/spike/obfuscate.exe"
+                "${workspaceFolder}/spike/Obfuscate.exe"
             ],
             "dependsOn": "convert-to-hex-array",
-            "problemMatcher": ["$gcc"],
-            "detail": "Cross-compiles Obfuscate.cpp for Windows using MinGW with static linking and links with HelloWorldHex.h"
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Cross-compiles Obfuscate.cpp for Windows with static linking and relocation tables"
         },
         {
             "label": "build-all",
-            "dependsOn": ["build-obfuscate"],
+            "dependsOn": [
+                "build-Obfuscate"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Builds HelloWorld.exe, converts it to a hex array, and builds obfuscate.exe"
+            "detail": "Builds HelloWorld.exe, converts it to a hex array, and builds Obfuscate.exe"
         }
     ]
 }
