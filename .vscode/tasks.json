@@ -30,7 +30,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "xxd -i \"${workspaceFolder}/spike/Hello_World.exe\" | sed 's/_.*_spike_Hello_World_exe/hello_world_exe/g' > \"${workspaceFolder}/bin/HelloWorldHex.h\""
+                "xxd -i \"${workspaceFolder}/spike/Hello_World.exe.exe\" | sed 's/_.*_spike_Hello_World_exe/hello_world_exe/g' > \"${workspaceFolder}/bin/HelloWorldHex.h\""
             ],
             "dependsOn": "build-helloworld",
             "problemMatcher": [],

