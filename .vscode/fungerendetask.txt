@@ -41,7 +41,8 @@
         {
             "label": "build-all",
             "dependsOn": [
-                "build-Obfuscate"
+                "build-Obfuscate",
+                "build-encrypt-helloworld"
             ],
             "group": {
                 "kind": "build",
