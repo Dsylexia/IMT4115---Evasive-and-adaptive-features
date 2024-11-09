@@ -19,7 +19,7 @@
             "command": "x86_64-w64-mingw32-g++",
             "args": [
                 "${workspaceFolder}/src/Obfuscate.cpp",
-                "${workspaceFolder}/src/startInjection.cpp", // Add this line
+                "${workspaceFolder}/src/startInjection.cpp",
                 "-I${workspaceFolder}/includes",
                 "-I/usr/x86_64-w64-mingw32/include",
                 "-std=c++17",
@@ -39,9 +39,30 @@
             "detail": "Cross-compiles Obfuscate.cpp for Windows with static linking and relocation tables"
         },
         {
+            "label": "build-encrypt-array",
+            "type": "shell",
+            "command": "x86_64-w64-mingw32-g++",
+            "args": [
+                "${workspaceFolder}/src/encryptarr.cpp",
+                "-I${workspaceFolder}/includes",
+                "-std=c++17",
+                "-static",
+                "-static-libgcc",
+                "-static-libstdc++",
+                "-ladvapi32",
+                "-o",
+                "${workspaceFolder}/bin/encrypt_array.exe"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Cross-compiles encrpyarr.cpp for Windows with static linking, outputting encrypt_array.exe"
+        },
+        {
             "label": "build-all",
             "dependsOn": [
-                "build-Obfuscate"
+                "build-Obfuscate",
+                "build-encrypt-array"
             ],
             "group": {
                 "kind": "build",
