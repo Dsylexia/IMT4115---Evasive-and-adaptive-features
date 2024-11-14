@@ -7,11 +7,11 @@
             "command": "bash",
             "args": [
                 "-c",
-                "xxd -i -n hello_world_exe \"${workspaceFolder}/bin/Hello_World.exe\" > \"${workspaceFolder}/includes/HelloWorldHex.h\""
+                "xxd -i -n payload \"${workspaceFolder}/bin/initial_payload.exe\" > \"${workspaceFolder}/includes/Payload.h\""
             ],
-            "dependsOn": "build-helloworld",
+            "dependsOn": "build-initial-payload",
             "problemMatcher": [],
-            "detail": "Converts Hello_World.exe to a hex array and stores it in HelloWorldHex.h with readable names"
+            "detail": "Converts initial_payload.exe to a hex array and stores it in HelloWorldHex.h with readable names"
         },
         {
             "label": "build-Obfuscate",
@@ -19,16 +19,11 @@
             "command": "x86_64-w64-mingw32-g++",
             "args": [
                 "${workspaceFolder}/src/Obfuscate.cpp",
-                "${workspaceFolder}/src/startInjection.cpp", // Add this line
+                "${workspaceFolder}/src/startInjection.cpp",
                 "-I${workspaceFolder}/includes",
                 "-I/usr/x86_64-w64-mingw32/include",
                 "-std=c++17",
                 "-static",
-                "-static-libgcc",
-                "-static-libstdc++",
-                "-mwindows",
-                "-Wl,--dynamicbase",
-                "-Wl,--nxcompat",
                 "-o",
                 "${workspaceFolder}/spike/Obfuscate.exe"
             ],
@@ -42,13 +37,13 @@
             "label": "build-all",
             "dependsOn": [
                 "build-Obfuscate",
-                "build-encrypt-helloworld"
+                "build-initial-payload"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Builds HelloWorld.exe, converts it to a hex array, builds Obfuscate.exe, and encrypts HelloWorldHex.h"
+            "detail": "Builds initial_payload.exe, converts it to a hex array, builds Obfuscate.exe, encrypts HelloWorldHex.h, and builds initial_payload.exe"
         }
     ]
 }

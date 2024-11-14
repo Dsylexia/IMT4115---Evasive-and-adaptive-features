@@ -2,16 +2,18 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "convert-to-hex-array",
+            "label": "compile-resource",
             "type": "shell",
-            "command": "bash",
+            "command": "x86_64-w64-mingw32-windres",
             "args": [
-                "-c",
-                "xxd -i -n hello_world_exe \"${workspaceFolder}/bin/Hello_World.exe\" > \"${workspaceFolder}/includes/HelloWorldHex.h\""
+                "${workspaceFolder}/bin/Payload.rc",
+                "-O",
+                "coff",
+                "-o",
+                "${workspaceFolder}/includes/Payload.res"
             ],
-            "dependsOn": "build-helloworld",
             "problemMatcher": [],
-            "detail": "Converts Hello_World.exe to a hex array and stores it in HelloWorldHex.h with readable names"
+            "detail": "Compiles the resource file to include initial_payload.exe as a resource"
         },
         {
             "label": "build-Obfuscate",
@@ -20,55 +22,30 @@
             "args": [
                 "${workspaceFolder}/src/Obfuscate.cpp",
                 "${workspaceFolder}/src/startInjection.cpp",
+                "${workspaceFolder}/includes/Payload.res",
                 "-I${workspaceFolder}/includes",
                 "-I/usr/x86_64-w64-mingw32/include",
                 "-std=c++17",
                 "-static",
-                "-static-libgcc",
-                "-static-libstdc++",
-                "-mwindows",
-                "-Wl,--dynamicbase",
-                "-Wl,--nxcompat",
                 "-o",
                 "${workspaceFolder}/spike/Obfuscate.exe"
             ],
-            "dependsOn": "convert-to-hex-array",
+            "dependsOn": "compile-resource",
             "problemMatcher": [
                 "$gcc"
             ],
-            "detail": "Cross-compiles Obfuscate.cpp for Windows with static linking and relocation tables"
-        },
-        {
-            "label": "build-encrypt-array",
-            "type": "shell",
-            "command": "x86_64-w64-mingw32-g++",
-            "args": [
-                "${workspaceFolder}/src/encryptarr.cpp",
-                "-I${workspaceFolder}/includes",
-                "-std=c++17",
-                "-static",
-                "-static-libgcc",
-                "-static-libstdc++",
-                "-ladvapi32",
-                "-o",
-                "${workspaceFolder}/bin/encrypt_array.exe"
-            ],
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "detail": "Cross-compiles encrpyarr.cpp for Windows with static linking, outputting encrypt_array.exe"
+            "detail": "Cross-compiles Obfuscate.cpp with the embedded resource, linking initial_payload.exe as a resource"
         },
         {
             "label": "build-all",
             "dependsOn": [
-                "build-Obfuscate",
-                "build-encrypt-array"
+                "build-Obfuscate"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Builds HelloWorld.exe, converts it to a hex array, builds Obfuscate.exe, and encrypts HelloWorldHex.h"
+            "detail": "Embeds initial_payload.exe as a resource and compiles Obfuscate.exe"
         }
     ]
 }

