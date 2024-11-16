@@ -2,6 +2,32 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "build-encryptRes",
+            "type": "shell",
+            "command": "x86_64-w64-mingw32-g++",
+            "args": [
+                "${workspaceFolder}/src/encryptRes.cpp",
+                "${workspaceFolder}/includes/Payload.res",  // Include the compiled resource file
+                "-I${workspaceFolder}/includes",
+                "-I/usr/x86_64-w64-mingw32/include",
+                "-L/usr/x86_64-w64-mingw32/lib",
+                "-lcrypt32",
+                "-lcabinet",
+                "-luser32",
+                "-lkernel32",
+                "-lwinmm",
+                "-lws2_32",
+                "-std=c++17",
+                "-static",
+                "-o",
+                "${workspaceFolder}/spike/encryptRes.exe"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Compiles encryptRes.cpp and links the resource file"
+        },        
+        {
             "label": "compile-resource",
             "type": "shell",
             "command": "x86_64-w64-mingw32-windres",
@@ -25,6 +51,12 @@
                 "${workspaceFolder}/includes/Payload.res",
                 "-I${workspaceFolder}/includes",
                 "-I/usr/x86_64-w64-mingw32/include",
+                "-lcrypt32",
+                "-lcabinet",
+                "-luser32",
+                "-lkernel32",
+                "-lwinmm",
+                "-lws2_32",
                 "-std=c++17",
                 "-static",
                 "-o",
@@ -39,13 +71,14 @@
         {
             "label": "build-all",
             "dependsOn": [
-                "build-Obfuscate"
+                "build-Obfuscate",
+                "build-encryptRes"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Embeds initial_payload.exe as a resource and compiles Obfuscate.exe"
-        }
+            "detail": "Builds all executables, including Obfuscate.exe and encryptRes.exe"
+        }        
     ]
 }

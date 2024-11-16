@@ -2,9 +2,12 @@
 #define OBFUSCATE_H
 
 #include <windows.h>
+#include <wincrypt.h>
+#include <compressapi.h>
 #include <iostream>
-#include <winternl.h>
-#include <string>
+#include <vector>
+#include <fstream>
+#include <iomanip>
 
 
 
