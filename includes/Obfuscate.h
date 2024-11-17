@@ -9,7 +9,9 @@
 #include <fstream>
 #include <iomanip>
 
-
+#include "startInjection.h"
+#include "decryptAndDecompress.h"
+#include "Resource.h"
 
 
 #endif  // OBFUSCATE_H

@@ -48,6 +48,7 @@
             "args": [
                 "${workspaceFolder}/src/Obfuscate.cpp",
                 "${workspaceFolder}/src/startInjection.cpp",
+                "${workspaceFolder}/src/decryptAndDecompress.cpp",
                 "${workspaceFolder}/includes/Payload.res",
                 "-I${workspaceFolder}/includes",
                 "-I/usr/x86_64-w64-mingw32/include",

